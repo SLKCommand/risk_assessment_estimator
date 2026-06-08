@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HIPAA Risk Assessment Estimator</title>
+<style>
+  :root {
+    --navy: #1E3A5F;
+    --navyL: #2563EB;
+    --navySoft: #EFF6FF;
+    --teal: #0F766E;
+    --tealSoft: #F0FDFA;
+    --amber: #D97706;
+    --amberSoft: #FFFBEB;
+    --red: #DC2626;
+    --redSoft: #FEF2F2;
+    --green: #16A34A;
+    --greenSoft: #F0FDF4;
+    --purple: #7C3AED;
+    --purpleSoft: #F5F3FF;
+    --gray: #374151;
+    --grayL: #6B7280;
+    --grayM: #9CA3AF;
+    --grayBg: #F8F9FA;
+    --grayLine: #E5E7EB;
+    --white: #FFFFFF;
+    --ink: #111827;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); font-size: 14px; color: var(--ink); background: #F3F4F6; }
+
+  .page { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  .topbar { background: var(--navy); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-radius: 10px; margin-bottom: 20px; }
+  .topbar h1 { font-size: 18px; font-weight: 600; }
+  .topbar .sub { font-size: 12px; opacity: .7; margin-top: 2px; }
+  .topbar .version { font-size: 11px; background: rgba(255,255,255,.15); padding: 4px 10px; border-radius: 20px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media(max-width:600px) { .grid2,.grid3 { grid-template-columns: 1fr; } }
+
+  .card { background: white; border: 1px solid var(--grayLine); border-radius: 10px; padding: 14px 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .card-title span { font-size: 15px; }
+
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--grayL); margin-bottom: 4px; margin-top: 10px; }
+  label:first-of-type { margin-top: 0; }
+  select, input[type=text], input[type=number] {
+    width: 100%; font-size: 13px; padding: 7px 10px; border: 1px solid var(--grayLine);
+    border-radius: 6px; background: white; color: var(--ink); font-family: var(--font);
+  }
+  select:focus, input:focus { outline: 2px solid var(--navyL); outline-offset: 1px; }
+  textarea { width: 100%; font-size: 13px; padding: 7px 10px; border: 1px solid var(--grayLine); border-radius: 6px; resize: vertical; min-height: 60px; font-family: var(--font); color: var(--ink); }
+
+  .section-title { font-size: 15px; font-weight: 600; color: var(--navy); margin: 20px 0 10px; border-left: 3px solid var(--navyL); padding-left: 10px; }
+
+  .phase-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .phase-name { font-size: 12px; color: var(--gray); width: 180px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 10px; background: var(--grayBg); border-radius: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 5px; transition: width .3s; }
+  .phase-hrs { font-size: 12px; font-weight: 600; color: var(--ink); min-width: 50px; text-align: right; }
+  .phase-fee { font-size: 12px; color: var(--grayL); min-width: 60px; text-align: right; }
+
+  .total-box { background: var(--navy); color: white; border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-top: 14px; flex-wrap: wrap; gap: 12px; }
+  .total-num { font-size: 36px; font-weight: 700; }
+  .total-label { font-size: 12px; opacity: .7; margin-top: 2px; }
+  .total-fee { text-align: right; }
+  .total-fee .fee-num { font-size: 28px; font-weight: 700; color: #93C5FD; }
+  .total-fee .fee-label { font-size: 12px; opacity: .7; }
+
+  .session-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--grayBg); font-size: 13px; }
+  .session-row:last-child { border-bottom: none; }
+  .session-name { font-weight: 600; color: var(--navy); min-width: 90px; }
+  .session-desc { color: var(--grayL); flex: 1; margin: 0 12px; }
+  .session-time { font-weight: 600; color: var(--ink); min-width: 50px; text-align: right; }
+
+  .deliverable-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--grayBg); font-size: 13px; }
+  .deliverable-row:last-child { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: var(--greenSoft); color: var(--green); }
+  .badge-blue { background: var(--navySoft); color: var(--navyL); }
+  .badge-amber { background: var(--amberSoft); color: var(--amber); }
+
+  .complexity-bar { display: flex; gap: 4px; margin-top: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--grayLine); }
+  .dot.active { background: var(--navyL); }
+
+  .note { font-size: 12px; color: var(--grayL); font-style: italic; margin-top: 6px; padding: 8px 12px; background: var(--grayBg); border-radius: 6px; }
+
+  .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: var(--font); font-weight: 500; border: 1px solid var(--grayLine); background: white; color: var(--ink); transition: all .15s; }
+  .btn:hover { background: var(--grayBg); }
+  .btn-primary { background: var(--navyL); border-color: var(--navyL); color: white; }
+  .btn-primary:hover { background: var(--navy); }
+  .btn-green { background: var(--greenSoft); border-color: var(--green); color: var(--green); }
+  .btn-red { background: var(--redSoft); border-color: var(--red); color: var(--red); }
+
+  .custom-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .custom-row input[type=text] { flex: 1; }
+  .custom-row input[type=number] { width: 80px; }
+
+  #proposal-output { display: none; background: var(--grayBg); border: 1px solid var(--grayLine); border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; font-family: var(--mono); color: var(--ink); margin-top: 12px; }
+
+  .rate-row { display: flex; align-items: center; gap: 10px; }
+  .rate-row input { width: 100px; }
+  .rate-row span { font-size: 13px; color: var(--grayL); }
+
+  @media print {
+    body { background: white; }
+    .page { padding: 0; max-width: 100%; }
+    .topbar { border-radius: 0; }
+    .no-print { display: none !important; }
+    .card { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="topbar">
+    <div>
+      <h1>HIPAA Risk Assessment — Engagement Estimator</h1>
+      <div class="sub">NIST SP 800-30 · Healthcare organizations · v1.0</div>
+    </div>
+    <div class="version">v1.0</div>
+  </div>
+
+  <div class="section-title">Your billing rate</div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div>
+        <label>Hourly rate (USD)</label>
+        <div class="rate-row">
+          <span>$</span>
+          <input type="number" id="rate" value="175" min="50" max="1000" step="25" oninput="calc()">
+          <span>/ hour</span>
+        </div>
+      </div>
+      <div>
+        <label>Your name / firm</label>
+        <input type="text" id="firmName" placeholder="Your name or firm name" style="width:220px">
+      </div>
+      <div>
+        <label>Client name</label>
+        <input type="text" id="clientName" placeholder="Client organization name" style="width:220px">
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Organization profile</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><span>🏢</span> Organization</div>
+      <label>Organization type</label>
+      <select id="orgType" onchange="calc()">
+        <option value="solo">Solo practice / 1–5 staff</option>
+        <option value="small">Small org / 6–50 staff</option>
+        <option value="medium" selected>Mid-size / 51–300 staff</option>
+        <option value="large">Large / 300+ staff</option>
+      </select>
+      <label>Prior HIPAA assessment on file?</label>
+      <select id="priorAssess" onchange="calc()">
+        <option value="none" selected>No — first assessment</option>
+        <option value="partial">Partial — incomplete or outdated</option>
+        <option value="yes">Yes — within last 2 years</option>
+      </select>
+      <label>Number of scope boundaries</label>
+      <select id="scopes" onchange="calc()">
+        <option value="1" selected>1 — single program or department</option>
+        <option value="2">2–3 — multiple programs or locations</option>
+        <option value="4">4+ — enterprise or multi-entity</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>💻</span> Technical complexity</div>
+      <label>In-scope clinical systems</label>
+      <select id="systems" onchange="calc()">
+        <option value="1">1 system (e.g. single EMR)</option>
+        <option value="2" selected>2–4 systems</option>
+        <option value="5">5–8 systems</option>
+        <option value="9">9+ systems</option>
+      </select>
+      <label>Vendor / Business Associate complexity</label>
+      <select id="vendors" onchange="calc()">
+        <option value="low">Low — 1–3 vendors with PHI</option>
+        <option value="medium" selected>Medium — 4–8 vendors</option>
+        <option value="high">High — 9+ vendors or complex integrations</option>
+      </select>
+      <label>Contractor / non-employee workforce</label>
+      <select id="contractors" onchange="calc()">
+        <option value="none">None — employees only</option>
+        <option value="few">Few — under 50 contractors</option>
+        <option value="many" selected>Many — 50–300 contractors</option>
+        <option value="complex">Complex — 300+ or undocumented</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><span>📄</span> Documentation & availability</div>
+      <label>Documentation maturity</label>
+      <select id="docs" onchange="calc()">
+        <option value="none">None — starting from scratch</option>
+        <option value="partial" selected>Partial — some policies, no system inventory</option>
+        <option value="good">Good — policies, inventory, org chart on file</option>
+        <option value="mature">Mature — prior audit, all docs current</option>
+      </select>
+      <label>Client availability and responsiveness</label>
+      <select id="availability" onchange="calc()">
+        <option value="high">High — responds same day, well-prepared</option>
+        <option value="medium" selected>Medium — typical delays, some follow-up</option>
+        <option value="low">Low — hard to reach, frequent rescheduling</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📋</span> Scope additions</div>
+      <label>Include HIPAA Gap Analysis (45 controls)?</label>
+      <select id="gapAnalysis" onchange="calc()">
+        <option value="no" selected>No — risk assessment only</option>
+        <option value="yes">Yes — include full gap analysis</option>
+      </select>
+      <label>Include remediation plan?</label>
+      <select id="remedPlan" onchange="calc()">
+        <option value="yes" selected>Yes — prioritized action plan included</option>
+        <option value="no">No — assessment only</option>
+      </select>
+      <label>Travel required?</label>
+      <select id="travel" onchange="calc()">
+        <option value="no" selected>No — all sessions remote</option>
+        <option value="partial">Partial — 1–2 on-site sessions</option>
+        <option value="yes">Yes — majority on-site</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section-title">Custom line items</div>
+  <div class="card" style="margin-bottom:16px">
+    <div id="custom-items"></div>
+    <button class="btn btn-green no-print" onclick="addCustomItem()" style="margin-top:8px;font-size:12px">+ Add line item</button>
+  </div>
+
+  <div class="section-title">Estimate</div>
+  <div class="card">
+    <div id="phase-bars"></div>
+    <div class="total-box">
+      <div>
+        <div class="total-num" id="total-hrs">—</div>
+        <div class="total-label">estimated hours</div>
+        <div style="font-size:12px;opacity:.6;margin-top:2px" id="total-days">—</div>
+      </div>
+      <div class="total-fee">
+        <div class="fee-num" id="total-fee">—</div>
+        <div class="fee-label">estimated fee</div>
+        <div style="font-size:11px;opacity:.6;margin-top:2px" id="fee-range">—</div>
+      </div>
+    </div>
+    <div class="note" id="complexity-note"></div>
+  </div>
+
+  <div class="section-title">Session breakdown</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="session-row">
+      <div class="session-name">Session 1</div>
+      <div class="session-desc">CEO / COO / HR — org overview, programs, workforce, compliance posture</div>
+      <div class="session-time" id="s1-time">—</div>
+    </div>
+    <div class="session-row">
+      <div class="session-name">Session 2</div>
+      <div class="session-desc">IT / Compliance — systems, controls, vulnerabilities, open items</div>
+      <div class="session-time" id="s2-time">—</div>
+    </div>
+    <div class="session-row">
+      <div class="session-name">Session 3</div>
+      <div class="session-desc">IT validation — ratings review, resolve open items, confirm findings</div>
+      <div class="session-time" id="s3-time">—</div>
+    </div>
+    <div class="session-row">
+      <div class="session-name">Session 4</div>
+      <div class="session-desc">Leadership readout — present findings, priorities, sign-off</div>
+      <div class="session-time" id="s4-time">—</div>
+    </div>
+    <div class="session-row">
+      <div class="session-name">Solo work</div>
+      <div class="session-desc">Assessment completion, document review, report generation</div>
+      <div class="session-time" id="solo-time">—</div>
+    </div>
+  </div>
+
+  <div class="section-title">Deliverables</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="deliverable-row"><span>Session 1 intake guide (CEO/COO/HR)</span><span class="badge badge-green">Included</span></div>
+    <div class="deliverable-row"><span>Session 2 intake guide (IT/Compliance)</span><span class="badge badge-green">Included</span></div>
+    <div class="deliverable-row"><span>Phase 1 working notes document</span><span class="badge badge-green">Included</span></div>
+    <div class="deliverable-row"><span>Risk Assessment Report (NIST SP 800-30 Appendix K)</span><span class="badge badge-green">Included</span></div>
+    <div class="deliverable-row" id="gap-row"><span>HIPAA Security Rule Gap Analysis (45 controls)</span><span class="badge badge-blue" id="gap-badge">Add-on</span></div>
+    <div class="deliverable-row" id="remed-row"><span>Remediation Plan / Plan of Action &amp; Milestones</span><span class="badge badge-green" id="remed-badge">Included</span></div>
+    <div class="deliverable-row"><span>Executive presentation (leadership readout deck)</span><span class="badge badge-green">Included</span></div>
+    <div class="deliverable-row"><span>Threat intelligence source reference (4 Tier 1 sources)</span><span class="badge badge-green">Included</span></div>
+  </div>
+
+  <div class="section-title no-print">Proposal text</div>
+  <div class="card no-print">
+    <p style="font-size:13px;color:var(--grayL);margin-bottom:10px">Generate a proposal summary you can paste into an email or SOW. Fill in the client name and firm name above first.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="generateProposal()">Generate proposal text</button>
+      <button class="btn" onclick="window.print()">Print / Save PDF</button>
+      <button class="btn" onclick="copyEstimate()">Copy estimate summary</button>
+      <button class="btn btn-red" onclick="resetAll()">Reset all</button>
+    </div>
+    <div id="proposal-output"></div>
+    <div id="copy-confirm" style="display:none;font-size:12px;color:var(--green);margin-top:6px">✓ Copied to clipboard</div>
+  </div>
+
+  <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--grayLine);font-size:11px;color:var(--grayM);text-align:center">
+    HIPAA Risk Assessment Estimator · NIST SP 800-30 · v1.0 · Estimates are indicative — actual hours may vary based on engagement specifics
+  </div>
+
+</div>
+
+<script>
+const PHASES = [
+  {name:"Phase 1 — Prepare",color:"#2563EB",base:3},
+  {name:"Phase 2A/B — Threat sources & events",color:"#DC2626",base:3},
+  {name:"Phase 2C — Vulnerabilities",color:"#7C3AED",base:3},
+  {name:"Phase 2D/E — Likelihood & impact",color:"#0D9488",base:2},
+  {name:"Phase 2F — Risk determination",color:"#D97706",base:1},
+  {name:"Phase 3 — Report generation",color:"#16A34A",base:4},
+  {name:"Client sessions (4)",color:"#1E3A5F",base:6},
+];
+
+let customItems = [];
+
+function addCustomItem() {
+  const id = Date.now();
+  customItems.push({id, name:"", hours:0});
+  renderCustomItems();
+}
+
+function removeCustomItem(id) {
+  customItems = customItems.filter(c=>c.id!==id);
+  renderCustomItems();
+  calc();
+}
+
+function renderCustomItems() {
+  const container = document.getElementById('custom-items');
+  if(customItems.length===0){
+    container.innerHTML = '<div style="font-size:13px;color:var(--grayM);padding:4px 0">No custom items added. Use this for travel, training, retainer, or other fees.</div>';
+    return;
+  }
+  container.innerHTML = customItems.map(item=>`
+    <div class="custom-row">
+      <input type="text" placeholder="Description (e.g. Travel — on-site session)" value="${item.name}" oninput="updateCustomItem(${item.id},'name',this.value)" style="flex:1">
+      <input type="number" placeholder="Hrs" value="${item.hours||''}" min="0" step="0.5" oninput="updateCustomItem(${item.id},'hours',parseFloat(this.value)||0)" style="width:70px">
+      <button class="btn btn-red" onclick="removeCustomItem(${item.id})" style="padding:5px 10px;font-size:12px">✕</button>
+    </div>`).join('');
+}
+
+function updateCustomItem(id, key, val) {
+  const item = customItems.find(c=>c.id===id);
+  if(item){ item[key] = val; calc(); }
+}
+
+function calc() {
+  const rate = parseFloat(document.getElementById('rate').value) || 175;
+  const org = {solo:0.6, small:0.8, medium:1.0, large:1.5}[document.getElementById('orgType').value];
+  const prior = {none:1.3, partial:1.1, yes:0.7}[document.getElementById('priorAssess').value];
+  const sys = {1:0.7, 2:1.0, 5:1.4, 9:1.8}[document.getElementById('systems').value];
+  const vend = {low:0.8, medium:1.0, high:1.4}[document.getElementById('vendors').value];
+  const cont = {none:0.8, few:0.9, many:1.1, complex:1.4}[document.getElementById('contractors').value];
+  const docs = {none:1.4, partial:1.1, good:0.9, mature:0.7}[document.getElementById('docs').value];
+  const scopes = {1:1.0, 2:1.5, 4:2.2}[document.getElementById('scopes').value];
+  const avail = {high:0.85, medium:1.0, low:1.35}[document.getElementById('availability').value];
+  const gap = document.getElementById('gapAnalysis').value === 'yes' ? 1.25 : 1.0;
+  const remed = document.getElementById('remedPlan').value === 'yes' ? 1.0 : 0.85;
+  const travel = {no:1.0, partial:1.1, yes:1.25}[document.getElementById('travel').value];
+
+  const multiplier = org * prior * sys * vend * cont * docs * scopes * avail * gap * remed * travel;
+
+  const phases = PHASES.map(p => ({...p, hrs: Math.round(p.base * multiplier * 10) / 10}));
+  const customHrs = customItems.reduce((s,c)=>s+(parseFloat(c.hours)||0),0);
+  const baseTotal = phases.reduce((s,p)=>s+p.hrs, 0);
+  const total = Math.round((baseTotal + customHrs) * 10) / 10;
+  const rounded = Math.round(total);
+  const days = Math.round(total / 6 * 10) / 10;
+  const fee = Math.round(total * rate);
+  const feeHigh = Math.round(total * rate * 1.15);
+  const feeLow = Math.round(total * rate * 0.9);
+
+  const maxHrs = Math.max(...phases.map(p=>p.hrs), 1);
+  let barsHTML = phases.map(p=>{
+    const pct = Math.round(p.hrs / maxHrs * 100);
+    const phaseFee = Math.round(p.hrs * rate);
+    return `<div class="phase-row">
+      <div class="phase-name">${p.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${p.color}"></div></div>
+      <div class="phase-hrs">${p.hrs.toFixed(1)} hrs</div>
+      <div class="phase-fee">$${phaseFee.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+
+  if(customItems.filter(c=>c.hours>0).length > 0){
+    customItems.filter(c=>c.hours>0).forEach(c=>{
+      const pct = Math.round((c.hours||0) / maxHrs * 100);
+      const cFee = Math.round((c.hours||0) * rate);
+      barsHTML += `<div class="phase-row">
+        <div class="phase-name">${c.name||'Custom item'}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#6B7280"></div></div>
+        <div class="phase-hrs">${(c.hours||0).toFixed(1)} hrs</div>
+        <div class="phase-fee">$${cFee.toLocaleString()}</div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('phase-bars').innerHTML = barsHTML;
+  document.getElementById('total-hrs').textContent = rounded;
+  document.getElementById('total-days').textContent = days + ' working days  ·  approx. ' + Math.ceil(multiplier * 3) + ' calendar weeks';
+  document.getElementById('total-fee').textContent = '$' + fee.toLocaleString();
+  document.getElementById('fee-range').textContent = 'Range: $' + feeLow.toLocaleString() + ' – $' + feeHigh.toLocaleString();
+
+  const complexity = multiplier < 0.7 ? "Simple engagement — well-documented, small org, few vendors. Fast to complete." :
+    multiplier < 1.0 ? "Straightforward engagement — below-average complexity for this type of work." :
+    multiplier < 1.3 ? "Typical mid-size healthcare engagement." :
+    multiplier < 1.8 ? "Complex engagement — expect extra session time and follow-up rounds." :
+    "High complexity — consider phasing this engagement or adjusting your fee accordingly.";
+  document.getElementById('complexity-note').textContent = complexity;
+
+  const s1 = Math.round(Math.min(1.5 * multiplier * 0.7, 3) * 10) / 10;
+  const s2 = Math.round(Math.min(2 * multiplier * 0.8, 4) * 10) / 10;
+  const s3 = Math.round(Math.min(1 * multiplier * 0.7, 2) * 10) / 10;
+  const s4 = 1.5;
+  const solo = Math.max(Math.round((total - s1 - s2 - s3 - s4) * 10) / 10, 2);
+  document.getElementById('s1-time').textContent = s1.toFixed(1) + ' hrs';
+  document.getElementById('s2-time').textContent = s2.toFixed(1) + ' hrs';
+  document.getElementById('s3-time').textContent = s3.toFixed(1) + ' hrs';
+  document.getElementById('s4-time').textContent = s4.toFixed(1) + ' hrs';
+  document.getElementById('solo-time').textContent = solo.toFixed(1) + ' hrs';
+
+  const gapVal = document.getElementById('gapAnalysis').value;
+  document.getElementById('gap-badge').textContent = gapVal === 'yes' ? 'Included' : 'Not included';
+  document.getElementById('gap-badge').className = gapVal === 'yes' ? 'badge badge-green' : 'badge badge-amber';
+
+  const remedVal = document.getElementById('remedPlan').value;
+  document.getElementById('remed-badge').textContent = remedVal === 'yes' ? 'Included' : 'Not included';
+  document.getElementById('remed-badge').className = remedVal === 'yes' ? 'badge badge-green' : 'badge badge-amber';
+
+  window._lastCalc = {total:rounded, fee, feeLow, feeHigh, days, multiplier, rate, phases, customHrs, s1, s2, s3, s4, solo};
+}
+
+function generateProposal() {
+  const c = window._lastCalc;
+  if(!c) return;
+  const firm = document.getElementById('firmName').value || '[Your firm]';
+  const client = document.getElementById('clientName').value || '[Client name]';
+  const date = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const gapIncluded = document.getElementById('gapAnalysis').value === 'yes';
+  const remedIncluded = document.getElementById('remedPlan').value === 'yes';
+
+  const text = `HIPAA SECURITY RISK ASSESSMENT — ENGAGEMENT PROPOSAL
+${'='.repeat(55)}
+Prepared by: ${firm}
+Prepared for: ${client}
+Date: ${date}
+
+ENGAGEMENT OVERVIEW
+${'─'.repeat(40)}
+This proposal covers a HIPAA Security Risk Assessment conducted in accordance with NIST Special Publication 800-30 Revision 1 and HHS OCR guidance on the HIPAA Security Rule §164.308(a)(1)(ii)(A).
+
+ESTIMATED HOURS AND FEE
+${'─'.repeat(40)}
+Estimated hours:    ${c.total} hours
+Estimated fee:      $${c.fee.toLocaleString()} (at $${c.rate}/hr)
+Fee range:          $${c.feeLow.toLocaleString()} – $${c.feeHigh.toLocaleString()}
+Estimated duration: ${c.days} working days
+
+SESSION BREAKDOWN
+${'─'.repeat(40)}
+Session 1 — Executive interview (CEO/COO/HR):     ${c.s1.toFixed(1)} hrs
+Session 2 — IT & Compliance interview:            ${c.s2.toFixed(1)} hrs
+Session 3 — Validation & open items:              ${c.s3.toFixed(1)} hrs
+Session 4 — Leadership readout & sign-off:        ${c.s4.toFixed(1)} hrs
+Solo work (assessment, reports, documents):       ${c.solo.toFixed(1)} hrs
+
+DELIVERABLES
+${'─'.repeat(40)}
+✓ Session 1 intake guide (CEO/COO/HR)
+✓ Session 2 intake guide (IT/Compliance)
+✓ Phase 1 working notes document
+✓ Risk Assessment Report (NIST SP 800-30 Appendix K format)
+${gapIncluded ? '✓' : '—'} HIPAA Security Rule Gap Analysis (45 controls)${gapIncluded ? '' : ' [not included in this scope]'}
+${remedIncluded ? '✓' : '—'} Remediation Plan / Plan of Action & Milestones${remedIncluded ? '' : ' [not included in this scope]'}
+✓ Executive presentation (leadership readout)
+✓ Threat intelligence source reference
+
+METHODOLOGY
+${'─'.repeat(40)}
+Framework:          NIST SP 800-30 Revision 1
+Analysis approach:  Threat-oriented
+Assessment approach: Semi-quantitative
+Intelligence sources: HHS 405(d) HICP, Verizon DBIR, HHS OCR Breach Portal, CISA KEV Catalog
+
+NOTES
+${'─'.repeat(40)}
+• This estimate assumes reasonable client availability and document access.
+• Estimates may be revised following Session 1 if scope is materially different.
+• All sessions conducted remotely unless otherwise agreed.
+• Final report issued after all open items are resolved.
+
+${'─'.repeat(40)}
+${firm}  ·  ${date}`;
+
+  const el = document.getElementById('proposal-output');
+  el.style.display = 'block';
+  el.textContent = text;
+}
+
+function copyEstimate() {
+  const c = window._lastCalc;
+  if(!c) return;
+  const client = document.getElementById('clientName').value || '[Client]';
+  const text = `HIPAA Risk Assessment Estimate — ${client}\nHours: ${c.total} | Fee: $${c.fee.toLocaleString()} | Duration: ${c.days} working days`;
+  navigator.clipboard.writeText(text).then(()=>{
+    document.getElementById('copy-confirm').style.display='block';
+    setTimeout(()=>document.getElementById('copy-confirm').style.display='none', 2500);
+  });
+}
+
+function resetAll() {
+  if(!confirm('Reset all fields to defaults?')) return;
+  document.querySelectorAll('select').forEach(s=>{
+    const opts = Array.from(s.options);
+    const def = opts.find(o=>o.defaultSelected);
+    if(def) s.value = def.value;
+    else s.selectedIndex = 0;
+  });
+  document.getElementById('rate').value = 175;
+  document.getElementById('firmName').value = '';
+  document.getElementById('clientName').value = '';
+  customItems = [];
+  renderCustomItems();
+  document.getElementById('proposal-output').style.display = 'none';
+  calc();
+}
+
+renderCustomItems();
+calc();
+</script>
+</body>
+</html>
